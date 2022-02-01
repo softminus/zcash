@@ -37,6 +37,7 @@ import base64
 import decimal
 import simplejson as json
 import logging
+import sys
 from http.client import HTTPConnection, HTTPSConnection, BadStatusLine
 from urllib.parse import urlparse
 
@@ -62,6 +63,7 @@ class AuthServiceProxy():
 
     def __init__(self, service_url, service_name=None, timeout=HTTP_TIMEOUT, connection=None):
         self.__service_url = service_url
+        print("EGG?")
         self._service_name = service_name
         self.__url =  urlparse(service_url)
         (user, passwd) = (self.__url.username, self.__url.password)
@@ -109,6 +111,7 @@ class AuthServiceProxy():
         try:
             self.__conn.request(method, path, postdata, headers)
             return self._get_response()
+
         except Exception as e:
             # If connection was closed, try again.
             # Python 3.5+ raises BrokenPipeError instead of BadStatusLine when the connection was reset.
@@ -133,6 +136,7 @@ class AuthServiceProxy():
                                'params': args,
                                'id': AuthServiceProxy.__id_count}, default=EncodeDecimal)
         response = self._request('POST', self.__url.path, postdata)
+
         if response['error'] is not None:
             raise JSONRPCException(response['error'])
         elif 'result' not in response:
@@ -147,6 +151,7 @@ class AuthServiceProxy():
         return self._request('POST', self.__url.path, postdata)
 
     def _get_response(self):
+        print("egg response", file=sys.stderr)
         http_response = self.__conn.getresponse()
         if http_response is None:
             raise JSONRPCException({
@@ -159,6 +164,8 @@ class AuthServiceProxy():
 
         responsedata = http_response.read().decode('utf8')
         response = json.loads(responsedata, parse_float=decimal.Decimal)
+        print("EGG RESPONSE", responsedata, file=sys.stderr)
+
         if "error" in response and response["error"] is None:
             log.debug("<-%s- %s"%(response["id"], json.dumps(response["result"], default=EncodeDecimal)))
         else:

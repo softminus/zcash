@@ -182,6 +182,7 @@ def main():
     parser.add_argument('--jobs', '-j', type=int, default=4, help='how many test scripts to run in parallel. Default=4.')
     parser.add_argument('--nozmq', action='store_true', help='do not run the zmq tests')
     args, unknown_args = parser.parse_known_args()
+    print("EGG")
 
     # Create a set to store arguments and create the passon string
     tests = set(arg for arg in unknown_args if arg[:2] != "--")
@@ -348,8 +349,7 @@ class RPCTestHandler:
                               time.time(),
                               subprocess.Popen((self.tests_dir + t).split() + self.flags + port_seed,
                                                universal_newlines=True,
-                                               stdout=log_stdout,
-                                               stderr=log_stderr),
+                                               stdout=log_stdout),
                               log_stdout,
                               log_stderr))
             # Run serial scripts on their own. We always run these first,

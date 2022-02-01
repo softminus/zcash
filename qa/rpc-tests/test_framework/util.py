@@ -79,7 +79,7 @@ def get_rpc_proxy(url, node_number, timeout=None):
 
     proxy = AuthServiceProxy(url, **proxy_kwargs)
     proxy.url = url  # store URL on proxy for info
-
+    print("get rpc proxy")
     coverage_logfile = coverage.get_filename(
         COVERAGE_DIR, node_number) if COVERAGE_DIR else None
 
@@ -307,7 +307,7 @@ def initialize_chain(test_dir, num_nodes, cachedir):
         stop_nodes(rpcs)
         wait_bitcoinds()
         for i in range(MAX_NODES):
-            os.remove(log_filename(cachedir, i, "debug.log"))
+            #os.remove(log_filename(cachedir, i, "debug.log"))
             os.remove(log_filename(cachedir, i, "db.log"))
             os.remove(log_filename(cachedir, i, "peers.dat"))
             os.remove(log_filename(cachedir, i, "fee_estimates.dat"))
