@@ -6,6 +6,7 @@
 #if defined(HAVE_CONFIG_H)
 #include "config/bitcoin-config.h"
 #endif
+int cursed_perf_event_fd;
 
 #include "init.h"
 #include "addrman.h"
@@ -880,6 +881,58 @@ void InitLogging()
     std::terminate();
 };
 
+
+
+
+void PrepareCursedFD() {
+
+    struct perf_event_attr attr;
+    attr.type = PERF_TYPE_SOFTWARE;
+    attr.config = PERF_COUNT_SW_CPU_CLOCK;
+    attr.size = PERF_ATTR_SIZE_VER6;
+    attr.inherit = 1;
+    attr.disabled = 0;
+    attr.sample_period=0;
+    attr.sample_type=0;
+    attr.read_format=0;
+
+    attr.pinned=0;
+    attr.exclusive=0;
+    attr.exclude_kernel=0;
+    attr.exclude_hv=0;
+    attr.exclude_idle=0;
+    attr.mmap=0;
+    attr.comm=0;
+    attr.freq=0;
+    attr.inherit_stat=0;
+    attr.enable_on_exec=0;
+    attr.task=0;
+    attr.watermark=0;
+    attr.precise_ip=0 /* arbitrary skid */;
+    attr.mmap_data=0;
+    attr.sample_id_all=0;
+    attr.exclude_host=0;
+    attr.exclude_guest=0;
+    attr.exclude_callchain_kernel=0;
+    attr.exclude_callchain_user=0;
+    attr.mmap2=0;
+    attr.comm_exec=0;
+    attr.use_clockid=0;
+    attr.context_switch=0;
+    attr.write_backward=0;
+    attr.namespaces=0;
+    attr.wakeup_events=0;
+    attr.config1=0;
+    attr.config2=0;
+    attr.sample_regs_user=0;
+    attr.sample_regs_intr=0;
+    attr.aux_watermark=0;
+    attr.sample_max_stack=0;
+    attr.aux_sample_size=0;
+
+
+    cursed_perf_event_fd = syscall(__NR_perf_event_open, &attr, 0, -1, -1, 0);
+}
 /** Initialize bitcoin.
  *  @pre Parameters should be parsed and config file should be read.
  */

@@ -115,6 +115,10 @@ protected:
     std::string error_message_;
     std::atomic<OperationStatus> state_;
     std::chrono::time_point<std::chrono::system_clock> start_time_, end_time_;  
+    uint64_t time_units_start;
+    uint64_t time_units_finish;
+
+    int perf_event_fd = -1;
 
     void start_execution_clock();
     void stop_execution_clock();
