@@ -347,10 +347,7 @@ class RPCTestHandler:
             self.jobs.append((t,
                               time.time(),
                               subprocess.Popen((self.tests_dir + t).split() + self.flags + port_seed,
-                                               universal_newlines=True,
-                                               stdout=log_stdout),
-                              log_stdout,
-                              log_stderr))
+                                               universal_newlines=True)))
             # Run serial scripts on their own. We always run these first,
             # so we won't have added any other jobs yet.
             if t in SERIAL_SCRIPTS:

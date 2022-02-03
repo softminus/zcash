@@ -12,9 +12,32 @@ testing.
 
 """
 import os
-
+import logging
+import asyncio
+import time
 
 REFERENCE_FILENAME = 'rpc_interface.txt'
+
+log = logging.getLogger("Scheduler")
+
+async def acquire_cores(reader, writer, number_cores):
+    message = str(number_cores) + ",A"
+    writer.write(message.encode())
+    await writer.drain()
+    await reader.read(100)
+
+
+
+
+
+async def relinquish_cores(reader, writer, number_cores):
+    log.warning("relinquish called")
+
+    message = str(number_cores) + ",R"
+
+    writer.write(message.encode())
+    await writer.drain()
+    await reader.read(100)
 
 
 class AuthServiceProxyWrapper(object):
@@ -46,8 +69,32 @@ class AuthServiceProxyWrapper(object):
         called to a file.
 
         """
+        admission_control = True
+        if (self.auth_service_proxy_instance._service_name in ["z_sendmany", "z_mergetoaddress", "z_shieldcoinbase"]):
+            admission_control = True
+
+        if (admission_control == True):
+            log.warning("rpc method is %s", self.auth_service_proxy_instance._service_name)
+            log.warning("LINE A")
+
+            loope = asyncio.new_event_loop()
+
+            try:
+                log.warning("LINE B")
+
+                reader, writer = loope.run_until_complete(asyncio.open_connection('127.0.0.1', 8888))
+            except Exception as e:
+                log.warning("caught exception %s", e)
+                quit(1)
+            log.warning("LINE C")
+            loope.run_until_complete(acquire_cores(reader, writer, 1))
+            log.warning("LINE D")
+
         return_val = self.auth_service_proxy_instance.__call__(*args, **kwargs)
         rpc_method = self.auth_service_proxy_instance._service_name
+
+        if (admission_control == True):
+            loope.run_until_complete(relinquish_cores(reader, writer, 1))
 
         if self.coverage_logfile:
             with open(self.coverage_logfile, 'a+', encoding='utf8') as f:
