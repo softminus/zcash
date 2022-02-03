@@ -10,8 +10,6 @@
 
 #include <tracing.h>
 
-extern int cursed_perf_event_fd;
-
 class CScheduler;
 class CWallet;
 
