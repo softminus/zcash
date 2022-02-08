@@ -85,16 +85,24 @@ class AuthServiceProxyWrapper(object):
                 log.warning("admission control nonfunctional, unable to connect to server: %s", e)
                 quit(1)
             log.warning("LINE C")
-            loope.run_until_complete(acquire_cores(reader, writer, 1, self.auth_service_proxy_instance._service_name))
+            loope.run_until_complete(acquire_cores(reader, writer, 1, rpc_method))
             log.warning("LINE D")
 
         return_val = self.auth_service_proxy_instance.__call__(*args, **kwargs)
-        log.warning("LINE D %s" % return_val)
-        if (len(return_val) > 0):
-            log.warning("OPERATION COMPLETED! WHEE! %s" % return_val)
 
-        if (admission_control == True):
+        if (rpc_method in ["z_getoperationresult"] and len(return_val) > 0):
+            log.warning("OPERATION COMPLETED! WHEE! %s" % return_val)
+            log.warning("rpc method is %s", self.auth_service_proxy_instance._service_name)
+
+            loope = asyncio.new_event_loop()
+            try:
+                reader, writer = loope.run_until_complete(asyncio.open_connection('127.0.0.1', 8888))
+            except Exception as e:
+                log.warning("admission control nonfunctional, unable to connect to server: %s", e)
+                quit(1)
+            log.warning("LINE C")
             loope.run_until_complete(relinquish_cores(reader, writer, 1))
+            log.warning("LINE D")
 
         if self.coverage_logfile:
             with open(self.coverage_logfile, 'a+', encoding='utf8') as f:
