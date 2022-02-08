@@ -124,7 +124,7 @@ class BitcoinTestFramework(object):
         self.options.tmpdir += '/' + str(self.options.port_seed)
 
         if self.options.trace_rpc:
-            logging.basicConfig(level=logging.DEBUG, stream=sys.stderr)
+            logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
 
         if self.options.coveragedir:
             enable_coverage(self.options.coveragedir)
