@@ -71,29 +71,27 @@ class AuthServiceProxyWrapper(object):
         called to a file.
 
         """
-        admission_control = True
-        if (self.auth_service_proxy_instance._service_name in ["z_sendmany", "z_mergetoaddress", "z_shieldcoinbase"]):
-            admission_control = True
-
-        if (admission_control == True):
+        rpc_method = self.auth_service_proxy_instance._service_name
+        if (rpc_method in ["z_sendmany",
+                           "z_mergetoaddress",
+                           "z_shieldcoinbase",
+                           "saplingmigration"]):
             log.warning("rpc method is %s", self.auth_service_proxy_instance._service_name)
-            log.warning("LINE A")
 
             loope = asyncio.new_event_loop()
-
             try:
-                log.warning("LINE B")
-
                 reader, writer = loope.run_until_complete(asyncio.open_connection('127.0.0.1', 8888))
             except Exception as e:
-                log.warning("caught exception %s", e)
+                log.warning("admission control nonfunctional, unable to connect to server: %s", e)
                 quit(1)
             log.warning("LINE C")
             loope.run_until_complete(acquire_cores(reader, writer, 1, self.auth_service_proxy_instance._service_name))
             log.warning("LINE D")
 
         return_val = self.auth_service_proxy_instance.__call__(*args, **kwargs)
-        rpc_method = self.auth_service_proxy_instance._service_name
+        log.warning("LINE D %s" % return_val)
+        if (len(return_val) > 0):
+            log.warning("OPERATION COMPLETED! WHEE! %s" % return_val)
 
         if (admission_control == True):
             loope.run_until_complete(relinquish_cores(reader, writer, 1))
