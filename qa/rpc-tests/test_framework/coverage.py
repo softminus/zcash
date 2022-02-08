@@ -20,8 +20,8 @@ REFERENCE_FILENAME = 'rpc_interface.txt'
 
 log = logging.getLogger("Scheduler")
 
-async def acquire_cores(reader, writer, number_cores):
-    message = str(number_cores) + ",A"
+async def acquire_cores(reader, writer, number_cores, rpc):
+    message = str(number_cores) + ",A," + rpc
     writer.write(message.encode())
     await writer.drain()
     await reader.read(100)
@@ -38,6 +38,8 @@ async def relinquish_cores(reader, writer, number_cores):
     writer.write(message.encode())
     await writer.drain()
     await reader.read(100)
+    writer.close()
+
 
 
 class AuthServiceProxyWrapper(object):
@@ -87,7 +89,7 @@ class AuthServiceProxyWrapper(object):
                 log.warning("caught exception %s", e)
                 quit(1)
             log.warning("LINE C")
-            loope.run_until_complete(acquire_cores(reader, writer, 1))
+            loope.run_until_complete(acquire_cores(reader, writer, 1, self.auth_service_proxy_instance._service_name))
             log.warning("LINE D")
 
         return_val = self.auth_service_proxy_instance.__call__(*args, **kwargs)
