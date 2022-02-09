@@ -25,6 +25,7 @@ async def acquire_cores(reader, writer, number_cores, rpc):
     writer.write(message.encode())
     await writer.drain()
     await reader.read(100)
+    writer.close()
 
 
 
@@ -39,6 +40,8 @@ async def relinquish_cores(reader, writer, number_cores):
     await writer.drain()
     await reader.read(100)
     writer.close()
+
+
 
 
 
@@ -72,11 +75,15 @@ class AuthServiceProxyWrapper(object):
 
         """
         rpc_method = self.auth_service_proxy_instance._service_name
+
         if (rpc_method in ["z_sendmany",
-                           "z_mergetoaddress",
-                           "z_shieldcoinbase",
-                           "saplingmigration"]):
+                       "z_mergetoaddress",
+                       "z_shieldcoinbase",
+                       "saplingmigration"]):
             log.warning("rpc method is %s", self.auth_service_proxy_instance._service_name)
+
+
+
 
             loope = asyncio.new_event_loop()
             try:
@@ -87,12 +94,46 @@ class AuthServiceProxyWrapper(object):
             log.warning("LINE C")
             loope.run_until_complete(acquire_cores(reader, writer, 1, rpc_method))
             log.warning("LINE D")
+            loope.stop()
+            loope.close()
 
-        return_val = self.auth_service_proxy_instance.__call__(*args, **kwargs)
+
+
+
+        try:
+            return_val = self.auth_service_proxy_instance.__call__(*args, **kwargs)
+        except Exception as e:
+            if (rpc_method in ["z_sendmany",
+               "z_mergetoaddress",
+               "z_shieldcoinbase",
+               "saplingmigration"]):
+                loope = asyncio.new_event_loop()
+                try:
+                    reader, writer = loope.run_until_complete(asyncio.open_connection('127.0.0.1', 8888))
+                except Exception as e:
+                    log.warning("admission control nonfunctional, unable to connect to server: %s", e)
+                    quit(1)
+                log.warning("LINE C")
+                loope.run_until_complete(relinquish_cores(reader, writer, 1))
+                log.warning("LINE D")
+                loope.stop()
+                loope.close()
+            raise
+
+
+# if async op: 
+    # acquire core
+    # call rpc
+    # if catch exception, immediatley relinquish, and raise the exception again!
+# 
+# also let's move all the event loop shit into functions of their own so it stays clean and the merge doesn't suck
 
         if (rpc_method in ["z_getoperationresult"] and len(return_val) > 0):
-            log.warning("OPERATION COMPLETED! WHEE! %s" % return_val)
+            log.warning("OPERATION COMPLETED! WHEE! %s" % len(return_val))
             log.warning("rpc method is %s", self.auth_service_proxy_instance._service_name)
+
+        
+
 
             loope = asyncio.new_event_loop()
             try:
@@ -103,6 +144,11 @@ class AuthServiceProxyWrapper(object):
             log.warning("LINE C")
             loope.run_until_complete(relinquish_cores(reader, writer, 1))
             log.warning("LINE D")
+            loope.stop()
+            loope.close()
+
+
+
 
         if self.coverage_logfile:
             with open(self.coverage_logfile, 'a+', encoding='utf8') as f:
