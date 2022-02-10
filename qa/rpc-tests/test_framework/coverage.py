@@ -38,7 +38,11 @@ async def relinquish_cores(reader, writer, number_cores):
 
     writer.write(message.encode())
     await writer.drain()
-    await reader.read(100)
+    data = await reader.read(1)
+    message = data.decode()
+    if (message[0] == "K"):
+        quit(1)
+
     writer.close()
 
 
@@ -82,14 +86,13 @@ class AuthServiceProxyWrapper(object):
                        "saplingmigration"]):
             log.warning("rpc method is %s", self.auth_service_proxy_instance._service_name)
 
-
-
-
             loope = asyncio.new_event_loop()
             try:
                 reader, writer = loope.run_until_complete(asyncio.open_connection('127.0.0.1', 8888))
             except Exception as e:
                 log.warning("admission control nonfunctional, unable to connect to server: %s", e)
+                traceback.print_exc(file=sys.stdout)
+                traceback.print_exc(file=sys.stderr)
                 quit(1)
             log.warning("LINE C")
             loope.run_until_complete(acquire_cores(reader, writer, 1, rpc_method))
@@ -112,6 +115,8 @@ class AuthServiceProxyWrapper(object):
                     reader, writer = loope.run_until_complete(asyncio.open_connection('127.0.0.1', 8888))
                 except Exception as e:
                     log.warning("admission control nonfunctional, unable to connect to server: %s", e)
+                    traceback.print_exc(file=sys.stdout)
+                    traceback.print_exc(file=sys.stderr)
                     quit(1)
                 log.warning("LINE C")
                 loope.run_until_complete(relinquish_cores(reader, writer, 1))
@@ -128,7 +133,7 @@ class AuthServiceProxyWrapper(object):
 # 
 # also let's move all the event loop shit into functions of their own so it stays clean and the merge doesn't suck
 
-        if (rpc_method in ["z_getoperationresult"] and len(return_val) > 0):
+        if (rpc_method in ["z_getoperationresult"] and len(return_val) > 0): # FIXME MAYBE? add a condition that there's at least one argument to z_getoperationresult?
             log.warning("OPERATION COMPLETED! WHEE! %s" % len(return_val))
             log.warning("rpc method is %s", self.auth_service_proxy_instance._service_name)
 
