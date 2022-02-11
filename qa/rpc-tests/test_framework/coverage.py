@@ -20,6 +20,10 @@ REFERENCE_FILENAME = 'rpc_interface.txt'
 
 log = logging.getLogger("Scheduler")
 
+
+
+
+
 async def acquire_cores(reader, writer, number_cores, rpc):
     message = str(number_cores) + ",A," + rpc
     writer.write(message.encode())
@@ -40,8 +44,6 @@ async def relinquish_cores(reader, writer, number_cores):
     await writer.drain()
     data = await reader.read(1)
     message = data.decode()
-    if (message[0] == "K"):
-        quit(1)
 
     writer.close()
 
@@ -94,9 +96,7 @@ class AuthServiceProxyWrapper(object):
                 traceback.print_exc(file=sys.stdout)
                 traceback.print_exc(file=sys.stderr)
                 quit(1)
-            log.warning("LINE C")
             loope.run_until_complete(acquire_cores(reader, writer, 1, rpc_method))
-            log.warning("LINE D")
             loope.stop()
             loope.close()
 
@@ -118,9 +118,7 @@ class AuthServiceProxyWrapper(object):
                     traceback.print_exc(file=sys.stdout)
                     traceback.print_exc(file=sys.stderr)
                     quit(1)
-                log.warning("LINE C")
                 loope.run_until_complete(relinquish_cores(reader, writer, 1))
-                log.warning("LINE D")
                 loope.stop()
                 loope.close()
             raise
@@ -146,9 +144,7 @@ class AuthServiceProxyWrapper(object):
             except Exception as e:
                 log.warning("admission control nonfunctional, unable to connect to server: %s", e)
                 quit(1)
-            log.warning("LINE C")
             loope.run_until_complete(relinquish_cores(reader, writer, 1))
-            log.warning("LINE D")
             loope.stop()
             loope.close()
 
