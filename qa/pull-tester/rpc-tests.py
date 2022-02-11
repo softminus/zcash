@@ -353,8 +353,8 @@ class RPCTestHandler:
                               log_stderr))
             # Run serial scripts on their own. We always run these first,
             # so we won't have added any other jobs yet.
-            if t in SERIAL_SCRIPTS:
-                break
+            #if t in SERIAL_SCRIPTS:
+            #    break
         if not self.jobs:
             raise IndexError('pop from empty list')
         while True:
