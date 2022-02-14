@@ -332,7 +332,9 @@ class MergeToAddressHelper:
         # myzaddr will have 5 notes if testing before to Sapling activation and 4 otherwise
         num_notes = len(test.nodes[0].z_listunspent(0))
         result1 = test.nodes[0].z_mergetoaddress([myzaddr], myzaddr, DEFAULT_FEE, 50, 2)
-        result2 = test.nodes[0].z_mergetoaddress([myzaddr], myzaddr, DEFAULT_FEE, 50, 2)
+        wait_and_assert_operationid_status(test.nodes[0], result1['opid'])
+
+        result2 = test.nodes[0].z_mergetoaddress([myzaddr], myzaddr, DEFAULT_FEE, 50, 2) # unable to dispatch this because line 334's async op is reaped on line 349.
 
         # First merge should select from all notes
         assert_equal(result1["mergingUTXOs"], Decimal('0'))
@@ -346,7 +348,6 @@ class MergeToAddressHelper:
         assert_equal(result2["remainingUTXOs"], Decimal('0'))
         assert_equal(result2["mergingNotes"], Decimal('2'))
         assert_equal(result2["remainingNotes"], num_notes - 4)
-        wait_and_assert_operationid_status(test.nodes[0], result1['opid'])
         wait_and_assert_operationid_status(test.nodes[0], result2['opid'])
 
         test.sync_all()
