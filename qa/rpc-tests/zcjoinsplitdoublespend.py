@@ -53,10 +53,16 @@ class JoinSplitTest(BitcoinTestFramework):
 
         pool = [0, 1, 2, 3]
         for i in range(4):
+            A = time.time()
             (total_in, inputs) = gather_inputs(self.nodes[i], 40)
+            B = time.time()
             pool[i] = self.nodes[i].createrawtransaction(inputs, {})
+            C = time.time()
             pool[i] = self.nodes[i].zcrawjoinsplit(pool[i], {}, {zcaddress:39.99}, 39.99, 0)
+            D = time.time()
             signed = self.nodes[i].signrawtransaction(pool[i]["rawtxn"])
+            E = time.time()
+            print("mystery timings", B-A,C-A,D-A,E-A)
 
             # send the tx to both halves of the network
             self.nodes[0].sendrawtransaction(signed["hex"])

@@ -10,6 +10,8 @@ from test_framework.util import assert_equal, start_nodes, start_node, \
 
 from decimal import Decimal
 
+# why does this take 84 seconds???
+
 class WalletTest (BitcoinTestFramework):
 
     def __init__(self):

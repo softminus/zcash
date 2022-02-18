@@ -143,10 +143,13 @@ class WalletShieldCoinbaseTest (BitcoinTestFramework):
 
         def verify_locking(first, second, limit):
             result = self.nodes[0].z_shieldcoinbase(mytaddr, myzaddr, 0, limit)
+            opid1 = result['opid']
+
+            wait_and_assert_operationid_status(self.nodes[0], opid1)
+
             assert_equal(result["shieldingUTXOs"], Decimal(first))
             assert_equal(result["remainingUTXOs"], Decimal(second))
             remainingValue = result["remainingValue"]
-            opid1 = result['opid']
 
             # Verify that utxos are locked (not available for selection) by queuing up another shielding operation
             result = self.nodes[0].z_shieldcoinbase(mytaddr, myzaddr, 0, 0)
@@ -157,7 +160,6 @@ class WalletShieldCoinbaseTest (BitcoinTestFramework):
             opid2 = result['opid']
 
             # wait for both async operations to complete
-            wait_and_assert_operationid_status(self.nodes[0], opid1)
             wait_and_assert_operationid_status(self.nodes[0], opid2)
 
         # Shield the 800 utxos over two transactions

@@ -50,7 +50,7 @@ def acquire_cores(number_cores, rpc):
         traceback.print_exc(file=sys.stdout)
         traceback.print_exc(file=sys.stderr)
         quit(1)
-    evloop.run_until_complete(acquire_cores_lambda(reader, writer, number_cores, rpc_method))
+    evloop.run_until_complete(acquire_cores_lambda(reader, writer, number_cores, rpc))
     evloop.stop()
     evloop.close()
 
@@ -101,24 +101,21 @@ class AuthServiceProxyWrapper(object):
         """
         rpc_method = self.auth_service_proxy_instance._service_name
 
-        if (rpc_method in ["z_sendmany",
-                       "z_mergetoaddress",
-                       "z_shieldcoinbase",
-                       "saplingmigration"]):
+        async_calls = ["z_sendmany", "z_mergetoaddress", "z_shieldcoinbase", "saplingmigration"]
+        sync_calls = ["generate", "zcrawjoinsplit"]
+
+        if (rpc_method in async_calls):
             log.warning("rpc method is %s", self.auth_service_proxy_instance._service_name)
             acquire_cores(16, rpc_method)
 
-        if (rpc_method in ["generate"]):
+        if (rpc_method in sync_calls):
             log.warning("rpc method is %s", self.auth_service_proxy_instance._service_name)
-            acquire_cores(1, rpc_method)
+            acquire_cores(16, rpc_method)
 
         try:
             return_val = self.auth_service_proxy_instance.__call__(*args, **kwargs)
         except Exception as e:
-            if (rpc_method in ["z_sendmany",
-               "z_mergetoaddress",
-               "z_shieldcoinbase",
-               "saplingmigration"]):
+            if (rpc_method in async_calls):
                 relinquish_cores(16)
             raise
 
@@ -127,8 +124,8 @@ class AuthServiceProxyWrapper(object):
             log.warning("rpc method is %s", self.auth_service_proxy_instance._service_name)
             relinquish_cores(16)
 
-        if (rpc_method in ["generate"]):
-            relinquish_cores(1, rpc_method)
+        if (rpc_method in sync_calls):
+            relinquish_cores(16)
 
         if self.coverage_logfile:
             with open(self.coverage_logfile, 'a+', encoding='utf8') as f:

@@ -85,6 +85,8 @@ class WalletTreeStateTest (BitcoinTestFramework):
                 break
             time.sleep(1)
 
+        # we need to disable the admission control thing for this test because it depends on magic
+
         # Now mine Tx 1 which will change global treestate before Tx 2's second joinsplit begins processing
         self.sync_all()
         self.nodes[1].generate(1)

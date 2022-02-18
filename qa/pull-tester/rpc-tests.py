@@ -344,6 +344,7 @@ class RPCTestHandler:
             port_seed = ["--portseed={}".format(len(self.test_list) + self.portseed_offset)]
             log_stdout = tempfile.SpooledTemporaryFile(max_size=2**16)
             log_stderr = tempfile.SpooledTemporaryFile(max_size=2**16)
+            print("XXXXX XXXXX XXXXXXX STARTING UP TEST",t)
             self.jobs.append((t,
                               time.time(),
                               subprocess.Popen((self.tests_dir + t).split() + self.flags + port_seed,

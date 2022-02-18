@@ -87,6 +87,8 @@ class SproutSaplingMigration(BitcoinTestFramework):
         node.generate(1)
         self.sync_all()
 
+        # SPONTANEOUS GENERATION HAPPENS HERE! MAYBE ADD SOMETHING TO PING THE ADMISSION CONTROL SERVER ABOUT THIS!
+
         # At 495 % 500 we should have an async operation
         operationstatus = node.z_getoperationstatus()
         print("migration operation: {}".format(operationstatus))

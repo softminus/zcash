@@ -174,6 +174,8 @@ def initialize_datadir(dirname, n):
     rpc_u, rpc_p = rpc_auth_pair(n)
     with open(os.path.join(datadir, "zcash.conf"), 'w', encoding='utf8') as f:
         f.write("regtest=1\n")
+        f.write("genproclimit=16\n")
+        f.write("equihashsolver=tromp\n")
         f.write("showmetrics=0\n")
         f.write("rpcuser=" + rpc_u + "\n")
         f.write("rpcpassword=" + rpc_p + "\n")
