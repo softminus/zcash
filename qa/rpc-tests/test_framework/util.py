@@ -82,7 +82,7 @@ def get_rpc_proxy(url, node_number, timeout=None):
 
     coverage_logfile = coverage.get_filename(
         COVERAGE_DIR, node_number) if COVERAGE_DIR else None
-
+    # make another Wrapper-style class, inject it here
     return coverage.AuthServiceProxyWrapper(proxy, coverage_logfile)
 
 
@@ -218,8 +218,10 @@ def wait_for_bitcoind_start(process, url, i):
             if e.error['code'] != -28: # RPC in warmup?
                 raise # unknown JSON RPC exception
         time.sleep(0.25)
+    # inject AC-relinquish here
 
 def initialize_chain(test_dir, num_nodes, cachedir):
+    # inject AC-start here
     """
     Create a cache of a 200-block-long chain (with wallet) for MAX_NODES
     Afterward, create num_nodes copies from the cache
@@ -353,6 +355,8 @@ def start_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=
     """
     Start a bitcoind and return RPC connection to it
     """
+
+    # AC-start/delay
     datadir = os.path.join(dirname, "node"+str(i))
     if binary is None:
         binary = os.getenv("BITCOIND", "bitcoind")
