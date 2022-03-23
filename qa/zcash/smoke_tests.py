@@ -25,6 +25,7 @@ from slickrpc.exc import RpcException
 DEFAULT_FEE = Decimal('0.00001')
 URL_FAUCET_DONATION = 'https://faucet.testnet.z.cash/donations'
 URL_FAUCET_TAP = 'https://faucet.testnet.z.cash/'
+URL_ZECPAGES_FAUCET_TAP = 'https://light-faucet.zecpages.com/api/sendtaz'
 
 #
 # Smoke test definitions
@@ -271,6 +272,26 @@ def tap_zfaucet(addr):
         if response2.status_code != 200:
             print("Error tapping faucet at:", URL_FAUCET_TAP)
             os.sys.exit(1)
+
+
+def tap_zecpages_faucet(addr):
+    with requests.Session() as session:
+        # Get token to request TAZ from faucet with a given zcash address
+        response = session.get(URL_FAUCET_TAP)
+        if response.status_code != 200:
+            print("Error establishing session at:", URL_FAUCET_TAP)
+            os.sys.exit(1)
+        csrftoken = response.cookies['csrftoken']
+
+        # Request TAZ from the faucet
+        data_params = dict(csrfmiddlewaretoken=csrftoken, address=addr)
+        response2 = session.post(URL_FAUCET_TAP, data=data_params, headers=dict(Referer=URL_FAUCET_TAP))
+        if response2.status_code != 200:
+            print("Error tapping faucet at:", URL_FAUCET_TAP)
+            os.sys.exit(1)
+
+
+# The get_zfaucet_ functions return the appropriate addresses for *returning* coins to the faucet in question
 
 def get_zfaucet_addrs():
     with requests.Session() as session:
