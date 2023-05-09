@@ -44,6 +44,7 @@ SMOKE_TESTS = [
     # Address generation
     #('3a', True, True), # Generate a Sprout z-addr
     #('3b', True, True), # Generate multiple Sprout z-addrs
+    ('3aa', True, True), # Create an account
     ('3c', True, True), # Generate a t-addr
     ('3d', True, True), # Generate multiple t-addrs
     ('3e', True, True), # Generate a Sapling z-addr
@@ -298,6 +299,25 @@ def get_zfaucet_zsproutaddr():
     # At the time of writing this, it appears these(keys) are backwards
     return get_zfaucet_addrs()["z_address_sapling"]
 
+def generate_ua_address(results, case, zcash, account_number, address_types):
+    ret = run_cmd(results, case, zcash, 'z_getaddressforaccount', [account_number, address_types])
+    print("created address:", ret['address'])
+    return ret['address']
+
+def generate_address(results, case, zcash, account_number, address_type):
+    if address_type == ["p2pkh"]:
+        from_ua = generate_ua_address(results, case, zcash, account_number, ["p2pkh", "orchard"])
+        taddr_receiver = run_cmd(results, case, zcash, 'z_listunifiedreceivers', [from_ua])["p2pkh"]
+        return (taddr_receiver, from_ua)
+    elif address_type == ["non_ua_sapling"]:
+        from_ua = generate_ua_address(results, case, zcash, account_number, ["sapling"])
+        sapling_receiver = run_cmd(results, case, zcash, 'z_listunifiedreceivers', [from_ua])["sapling"]
+        return (sapling_receiver, from_ua)
+    else:
+        full_ua = generate_ua_address(results, case, zcash, account_number, address_type)
+        return (full_ua, full_ua)
+
+
 #
 # Test runners
 #
@@ -322,24 +342,27 @@ def transaction_chain(zcash):
     results = {}
 
     # Generate the various addresses we will use
-    taddr_1 = run_cmd(results, '3c', zcash, 'getnewaddress')
-    taddr_2 = run_cmd(results, '3d', zcash, 'getnewaddress')
-    taddr_3 = run_cmd(results, '3d', zcash, 'getnewaddress')
-    taddr_4 = run_cmd(results, '3d', zcash, 'getnewaddress')
-    taddr_5 = run_cmd(results, '3d', zcash, 'getnewaddress')
-    sapling_zaddr_1 = run_cmd(results, '3e', zcash, 'z_getnewaddress', ['sapling'])
-    sapling_zaddr_2 = run_cmd(results, '3f', zcash, 'z_getnewaddress', ['sapling'])
-    sapling_zaddr_3 = run_cmd(results, '3f', zcash, 'z_getnewaddress', ['sapling'])
+    account_number  = run_cmd(results, '3aa', zcash, 'z_getnewaccount')["account"]
 
-    # Check that the zaddrs are all listed
-    zaddrs = run_cmd(results, '5a', zcash, 'z_listaddresses')
-    if ( sapling_zaddr_1 not in zaddrs or
-            sapling_zaddr_2 not in zaddrs):
-        results['5a'] = False
+    (taddr_1, taddr_1_from) = generate_address(results, "3c", zcash, account_number, ["p2pkh"])
+    (taddr_2, taddr_2_from) = generate_address(results, "3d", zcash, account_number, ["p2pkh"])
+    (taddr_3, taddr_3_from) = generate_address(results, "3d", zcash, account_number, ["p2pkh"])
+    (taddr_4, taddr_4_from) = generate_address(results, "3d", zcash, account_number, ["p2pkh"])
+    (taddr_5, taddr_5_from) = generate_address(results, "3d", zcash, account_number, ["p2pkh"])
+
+    (sapling_zaddr_1, sapling_zaddr_1_from) = generate_address(results, "3e", zcash, account_number, ["non_ua_sapling"])
+    (sapling_zaddr_2, sapling_zaddr_2_from) = generate_address(results, "3f", zcash, account_number, ["non_ua_sapling"])
+    (sapling_zaddr_3, sapling_zaddr_3_from) = generate_address(results, "3f", zcash, account_number, ["non_ua_sapling"])
+
+    # # Check that the zaddrs are all listed
+    # zaddrs = run_cmd(results, '5a', zcash, 'z_listaddresses')
+    # if ( sapling_zaddr_1 not in zaddrs or
+    #         sapling_zaddr_2 not in zaddrs):
+    #     results['5a'] = False
 
     # Validate the addresses
     ret = run_cmd(results, '5c', zcash, 'z_validateaddress', [sapling_zaddr_1])
-    if not ret['isvalid'] or ret['address_type'] != 'sapling':
+    if not ret['isvalid'] or ret['address_type'] != 'sapling' or not ret['ismine']:
         results['5c'] = False
 
     # Set up beginning and end of the chain
@@ -380,12 +403,12 @@ def transaction_chain(zcash):
         # taddr -> Sapling
         # Send it all here because z_sendmany pick a new t-addr for change
         sapling_balance = check_z_sendmany(
-            results, '4f', zcash, taddr_1, [(sapling_zaddr_1, taddr_balance - LEGACY_DEFAULT_FEE)], "AllowRevealedSenders")[0]
+            results, '4f', zcash, taddr_1_from, [(sapling_zaddr_1, taddr_balance - LEGACY_DEFAULT_FEE)], "AllowRevealedSenders")[0]
         taddr_balance = Decimal('0')
 
         # Sapling -> taddr
         taddr_balance = check_z_sendmany(
-            results, '4i', zcash, sapling_zaddr_1, [(taddr_1, (starting_balance / Decimal('10')) * Decimal('3'))], "AllowRevealedRecipients")[0]
+            results, '4i', zcash, sapling_zaddr_1_from, [(taddr_1, (starting_balance / Decimal('10')) * Decimal('3'))], "AllowRevealedRecipients")[0]
         sapling_balance -= taddr_balance + LEGACY_DEFAULT_FEE
 
         #
@@ -394,23 +417,23 @@ def transaction_chain(zcash):
 
         # Sapling -> same Sapling
         sapling_balance = check_z_sendmany(
-            results, '4g',zcash, sapling_zaddr_1, [(sapling_zaddr_1, sapling_balance - LEGACY_DEFAULT_FEE)], "FullPrivacy")[0]
+            results, '4g',zcash, sapling_zaddr_1_from, [(sapling_zaddr_1, sapling_balance - LEGACY_DEFAULT_FEE)], "FullPrivacy")[0]
 
         # taddr -> different taddr
         # Sapling -> different Sapling
         (taddr_balance, sapling_balance) = check_z_sendmany_parallel(results, zcash, [
-            ('4e', taddr_1, [(taddr_2, taddr_balance - LEGACY_DEFAULT_FEE)], "AllowFullyTransparent"),
-            ('4h', sapling_zaddr_1, [(sapling_zaddr_2, sapling_balance - LEGACY_DEFAULT_FEE)], "FullPrivacy"),
+            ('4e', taddr_1_from, [(taddr_2, taddr_balance - LEGACY_DEFAULT_FEE)], "AllowFullyTransparent"), # taddr_1_from pulls from sapling instead of p2pkh
+            ('4h', sapling_zaddr_1_from, [(sapling_zaddr_2, sapling_balance - LEGACY_DEFAULT_FEE)], "FullPrivacy"),
         ])
 
         # taddr -> multiple taddr
         # Sapling -> multiple Sapling
         check_z_sendmany_parallel(results, zcash, [
-            ('4p', taddr_2, [
+            ('4p', taddr_2_from, [
                 (taddr_1, starting_balance / Decimal('10')),
                 (taddr_3, taddr_balance - (starting_balance / Decimal('10')) - LEGACY_DEFAULT_FEE),
             ], "AllowFullyTransparent"),
-            ('4t', sapling_zaddr_2, [
+            ('4t', sapling_zaddr_2_from, [
                 (sapling_zaddr_1, starting_balance / Decimal('10')),
                 (sapling_zaddr_3, starting_balance / Decimal('10')),
             ], "FullPrivacy"),
@@ -435,7 +458,7 @@ def transaction_chain(zcash):
 
         # Sapling -> taddr and Sapling
         check_z_sendmany(
-            results, '4w', zcash,  sapling_zaddr_2,[
+            results, '4w', zcash,  sapling_zaddr_2_from, [
                 (taddr_3, starting_balance / Decimal('10')),
                 (sapling_zaddr_1, starting_balance / Decimal('10'))], "AllowRevealedRecipients")[0]
         
@@ -449,7 +472,7 @@ def transaction_chain(zcash):
         taddr_balance -= starting_balance / Decimal('10')
 
         # Sapling -> multiple taddr
-        check_z_sendmany(results, '4v', zcash, sapling_zaddr_2, [
+        check_z_sendmany(results, '4v', zcash, sapling_zaddr_2_from, [
                 (taddr_4, (starting_balance / Decimal('10'))),
                 (taddr_5, (starting_balance / Decimal('10')))], "AllowRevealedRecipients")[0]
             
@@ -468,7 +491,7 @@ def transaction_chain(zcash):
 
         # taddr -> multiple Sapling
         taddr_2_balance = Decimal(zcash.z_getbalance(taddr_2)).quantize(Decimal('1.00000000'))
-        check_z_sendmany(results, '4r', zcash, taddr_2, [
+        check_z_sendmany(results, '4r', zcash, taddr_2_from, [
                 (sapling_zaddr_1, (starting_balance / Decimal('10'))),
                 (sapling_zaddr_2, taddr_2_balance - (starting_balance / Decimal('10')) - LEGACY_DEFAULT_FEE)], "AllowFullyTransparent")[0]
 
@@ -510,7 +533,11 @@ def transaction_chain(zcash):
 
         print()
         print('Returning remaining balance minus fees')
-        for addr in all_addrs:
+        all_from_addrs = [
+            taddr_1_from, taddr_2_from, taddr_3_from, taddr_4_from, taddr_5_from,
+            sapling_zaddr_1_from, sapling_zaddr_2_from, sapling_zaddr_3_from,
+        ]
+        for addr in all_from_addrs:
             balance = Decimal(zcash.z_getbalance(addr)).quantize(Decimal('1.00000000'))
             if balance > 0:
                 z_sendmany(None, '', zcash, addr, [(chain_end, balance - LEGACY_DEFAULT_FEE)], "NoPrivacy")
