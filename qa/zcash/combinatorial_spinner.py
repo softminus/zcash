@@ -11,9 +11,21 @@
 
 
 
+import argparse
+import datetime
+import copy
+import os
+import requests
+import itertools
+import subprocess
+import sys
+import time
+import traceback
 
-
+from decimal import Decimal
 from enum import Enum
+from slickrpc import Proxy
+from slickrpc.exc import RpcException
 
 
 address_classes = Enum("Address Classes", ["NonUA", "UA", "BareUA", "Any"])
@@ -25,12 +37,18 @@ class AddressType:
     def __init__(self, address_class, pool_types):
         self.address_class = address_class
         self.pool_types = pool_types
+        self.address = None
     def __str__(self):
-        return f"{self.address_class.name} address, {{{str(self.pool_types)}}} protocols"
+        if self.address == None:
+          return f"{self.address_class.name} address type, {{{str(self.pool_types)}}} protocols"
+        else:
+            return f"{self.address_class.name} address type, {{{str(self.pool_types)}}} protocols, address={self.address}"
     def __repr__(self):
         return str(self)
     def __eq__(self, other):
         return self.address_class == other.address_class and self.pool_types == other.pool_types
+    def hydrate(self, address):
+        self.address = address
 
 class Transaction:
     def __init__(self, transaction_type, inputs, outputs):
@@ -93,17 +111,45 @@ invalid_combinations = [
     Transaction(transaction_types.z_mergetoaddress, AddressType(address_classes.UA, pool_types.Any), AddressType(address_classes.Any, pool_types.Any)),
 ]
 
-def create_all_transactions():
+def all_address_types():
+    address_types = []
+    for address_class in address_classes:
+        if address_class != address_classes.Any:
+            address_types.extend(valid_address_generator(address_class))
+    return address_types
+
+def create_SISO_sendmany_transactions():
+    transaction_type = transaction_types.z_sendmany
     transactions = []
-    for transaction_type in transaction_types:
-        for input_address_type in address_classes:
-            if input_address_type == address_classes.Any:
-                continue
-            for output_address_type in address_classes:
-                if output_address_type == address_classes.Any:
-                    continue
-                for input_address_types in valid_address_generator(input_address_type):
-                    for output_address_types in valid_address_generator(output_address_type):
-                        transactions.append(Transaction(transaction_type, input_address_types, output_address_types))
-    
+    for tx in itertools.product(all_address_types(), all_address_types()):
+        input_address_type = copy.deepcopy(tx[0])
+        output_address_type = copy.deepcopy(tx[1])
+        transactions.append(Transaction(transaction_type,  [input_address_type], [output_address_type]))
     return transactions
+
+
+all_transactions_alternate = create_SISO_sendmany_transactions()
+
+# def create_MISO_transactions():
+#     transactions = []
+#     transaction_type = transaction_types.z_mergetoaddress
+#     for input_address_type in address_classes:
+
+
+# now, we hydrate the transactions with actual addresses
+
+
+def hydrate_transaction(transaction):
+    for input_address_type in transaction.inputs:
+        # actually create from address here
+        input_address_type.hydrate("eggs input")
+    for output_address_type in transaction.outputs:
+        # actually create to address here
+        output_address_type.hydrate("eggs output")
+
+
+
+
+for transaction in all_transactions_alternate:
+    hydrate_transaction(transaction)
+    print(transaction)
